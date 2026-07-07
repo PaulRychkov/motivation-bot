@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS events_outbox;
+DROP TABLE IF EXISTS agent_notes;
+DROP TABLE IF EXISTS dialog_messages;
+DROP TABLE IF EXISTS inbox_events;
+DROP TABLE IF EXISTS interventions;
+DROP TABLE IF EXISTS chat_profiles;
+DROP TYPE IF EXISTS tone;
+DROP TYPE IF EXISTS message_role;
+DROP TYPE IF EXISTS intervention_outcome;
+DROP TYPE IF EXISTS intervention_trigger;
+DROP TYPE IF EXISTS intervention_kind;

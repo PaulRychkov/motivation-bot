@@ -1,0 +1,86 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bot-postgres
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_USER: bot
+      POSTGRES_PASSWORD: bot
+      POSTGRES_DB: bot
+    volumes:
+      - bot-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bot -d bot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  core-service:
+    build:
+      context: .
+      dockerfile: cmd/core-service/Dockerfile
+    container_name: bot-core-service
+    ports:
+      - "8083:8083"
+    environment:
+      BOT_DB_HOST: postgres
+      BOT_DB_PORT: "5432"
+      BOT_KAFKA_BROKERS: kafka:29092
+      BOT_TASKS_URL: http://host.docker.internal:8081
+      BOT_POMODORO_URL: ${BOT_POMODORO_URL:-http://host.docker.internal:8082}
+      BOT_DEFAULT_TIMEZONE: ${BOT_DEFAULT_TIMEZONE:-Asia/Yekaterinburg}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - default
+      - ecosystem
+    restart: unless-stopped
+
+  agent-service:
+    build:
+      context: .
+      dockerfile: cmd/agent-service/Dockerfile
+    container_name: bot-agent-service
+    env_file:
+      - .env
+    environment:
+      BOT_KAFKA_BROKERS: kafka:29092
+      BOT_CORE_URL: http://core-service:8083
+      BOT_TASKS_MCP_URL: http://host.docker.internal:8081/mcp
+      BOT_POMODORO_MCP_URL: ${BOT_POMODORO_MCP_URL:-http://host.docker.internal:8082/mcp}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - core-service
+    networks:
+      - default
+      - ecosystem
+    restart: unless-stopped
+
+  telegram-service:
+    build:
+      context: .
+      dockerfile: cmd/telegram-service/Dockerfile
+    container_name: bot-telegram-service
+    env_file:
+      - .env
+    environment:
+      BOT_KAFKA_BROKERS: kafka:29092
+    depends_on:
+      - core-service
+    networks:
+      - default
+      - ecosystem
+    restart: unless-stopped
+
+networks:
+  ecosystem:
+    external: true
+    name: ecosystem
+
+volumes:
+  bot-pg-data:

@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+*.exe
+/bin/
+*.test
+coverage.out
+*.log
+node_modules/
+dist/

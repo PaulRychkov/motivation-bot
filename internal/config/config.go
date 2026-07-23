@@ -60,6 +60,10 @@ type Config struct {
 	StallGapMin             int
 	StallCooldownMin        int
 	MeetingMaxDurMin        int
+
+	ChatPort   int
+	ChatToken  string
+	ChatChatID int64
 }
 
 func Load() Config {
@@ -113,6 +117,9 @@ func Load() Config {
 	v.SetDefault("STALL_GAP_MINUTES", 60)
 	v.SetDefault("STALL_COOLDOWN_MINUTES", 150)
 	v.SetDefault("MEETING_MAX_DURATION_MINUTES", 240)
+	v.SetDefault("CHAT_PORT", 8084)
+	v.SetDefault("CHAT_TOKEN", "")
+	v.SetDefault("CHAT_CHAT_ID", 0)
 
 	return Config{
 		HTTPPort:          v.GetInt("HTTP_PORT"),
@@ -164,6 +171,10 @@ func Load() Config {
 		StallGapMin:             v.GetInt("STALL_GAP_MINUTES"),
 		StallCooldownMin:        v.GetInt("STALL_COOLDOWN_MINUTES"),
 		MeetingMaxDurMin:        v.GetInt("MEETING_MAX_DURATION_MINUTES"),
+
+		ChatPort:   v.GetInt("CHAT_PORT"),
+		ChatToken:  strings.TrimSpace(v.GetString("CHAT_TOKEN")),
+		ChatChatID: v.GetInt64("CHAT_CHAT_ID"),
 	}
 }
 

@@ -8,6 +8,7 @@ require (
 	github.com/go-telegram/bot v1.22.0
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/spf13/viper v1.21.0
 	go.uber.org/zap v1.28.0

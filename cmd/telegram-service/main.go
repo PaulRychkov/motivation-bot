@@ -48,6 +48,7 @@ func main() {
 	if err != nil {
 		log.Fatal("kafka consumer", zap.Error(err))
 	}
+	consumer.RequireSuccess(kafkax.TopicTgOutgoing)
 	defer consumer.Close()
 
 	go consumer.Run(ctx)

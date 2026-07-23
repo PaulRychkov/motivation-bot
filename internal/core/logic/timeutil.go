@@ -32,6 +32,16 @@ func InQuietHours(quietStart, quietEnd *int, localMin int) bool {
 	return localMin >= s || localMin < e
 }
 
+func InDailyWindow(localMin, start, end int) bool {
+	if start == end {
+		return false
+	}
+	if start < end {
+		return localMin >= start && localMin < end
+	}
+	return localMin >= start || localMin < end
+}
+
 func LocalDayBoundsUTC(loc *time.Location, localDate string) (time.Time, time.Time, error) {
 	start, err := time.ParseInLocation(dateLayout, localDate, loc)
 	if err != nil {

@@ -191,5 +191,16 @@ func NewCoreTools(core *coreclient.Client, chatID int64) *Static {
 			return MustJSON(stats), nil
 		})
 
+	s.Add("get_phone_activity",
+		"Активность в телефоне по данным приложения Focus: экранное время и отвлечения за сегодня (минуты), разбивка по категориям (games/social/video/…), топ приложений, отвлечения за последний час и прямо сейчас, приложение на переднем плане. Пусто, если данных ещё нет.",
+		nil,
+		func(ctx context.Context, _ json.RawMessage) (string, error) {
+			activity, err := core.PhoneActivity(ctx, chatID)
+			if err != nil {
+				return "", err
+			}
+			return MustJSON(activity), nil
+		})
+
 	return s
 }

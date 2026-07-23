@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -14,6 +16,8 @@ import (
 
 	"github.com/PaulRychkov/motivation-bot/internal/core/models"
 )
+
+const maxIngestBytes = 1 << 20
 
 type Service interface {
 	EnsureProfile(ctx context.Context, chatID int64) (models.ChatProfile, bool, error)
@@ -28,6 +32,8 @@ type Service interface {
 	Notes(ctx context.Context) ([]models.AgentNote, error)
 	UpsertNote(ctx context.Context, key string, value json.RawMessage, expiresAt *time.Time) error
 	EffectivenessStats(ctx context.Context, chatID int64) ([]models.KindStat, error)
+	IngestPhoneUsage(ctx context.Context, raw []byte) error
+	PhoneActivity(ctx context.Context, chatID int64) (models.PhoneActivity, error)
 }
 
 var allowedOutcomes = map[string]bool{
@@ -45,13 +51,14 @@ var allowedRoles = map[string]bool{
 }
 
 type Handler struct {
-	svc Service
-	log *zap.Logger
+	svc         Service
+	log         *zap.Logger
+	ingestToken string
 }
 
-func New(svc Service, log *zap.Logger) *gin.Engine {
+func New(svc Service, log *zap.Logger, ingestToken string) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
-	h := &Handler{svc: svc, log: log}
+	h := &Handler{svc: svc, log: log, ingestToken: ingestToken}
 	r := gin.New()
 	r.Use(gin.Recovery())
 
@@ -74,8 +81,42 @@ func New(svc Service, log *zap.Logger) *gin.Engine {
 	in.GET("/notes", h.listNotes)
 	in.PUT("/notes/:key", h.putNote)
 	in.GET("/stats/effectiveness", h.stats)
+	in.GET("/phone/activity/:chat_id", h.phoneActivity)
+
+	ingest := r.Group("/ingest/v1")
+	ingest.POST("/phone-usage", h.ingestPhoneUsage)
 
 	return r
+}
+
+func (h *Handler) ingestPhoneUsage(c *gin.Context) {
+	if h.ingestToken != "" && !h.authorized(c) {
+		errResp(c, http.StatusUnauthorized, "unauthorized", "неверный токен")
+		return
+	}
+	raw, err := io.ReadAll(io.LimitReader(c.Request.Body, maxIngestBytes))
+	if err != nil {
+		errResp(c, http.StatusBadRequest, "bad_body", err.Error())
+		return
+	}
+	if len(raw) == 0 {
+		errResp(c, http.StatusBadRequest, "empty_body", "пустое тело запроса")
+		return
+	}
+	if err := h.svc.IngestPhoneUsage(c.Request.Context(), raw); err != nil {
+		h.log.Warn("приём данных телефона", zap.Error(err))
+		errResp(c, http.StatusBadRequest, "bad_event", err.Error())
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"status": "accepted"})
+}
+
+func (h *Handler) authorized(c *gin.Context) bool {
+	header := strings.TrimSpace(c.GetHeader("Authorization"))
+	if !strings.HasPrefix(header, "Bearer ") {
+		return false
+	}
+	return strings.TrimSpace(strings.TrimPrefix(header, "Bearer ")) == h.ingestToken
 }
 
 func errResp(c *gin.Context, status int, code, message string) {
@@ -314,6 +355,19 @@ func (h *Handler) putNote(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+func (h *Handler) phoneActivity(c *gin.Context) {
+	chatID, ok := chatIDParam(c)
+	if !ok {
+		return
+	}
+	activity, err := h.svc.PhoneActivity(c.Request.Context(), chatID)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, activity)
 }
 
 func (h *Handler) stats(c *gin.Context) {

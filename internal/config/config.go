@@ -38,6 +38,27 @@ type Config struct {
 	DeadlinePollSec   int
 	SchedulerSec      int
 	OutboxRelaySec    int
+
+	PhoneIngestToken       string
+	DistractionMinutes     int
+	DistractionCooldownMin int
+	PhoneDailyDistractMin  int
+	PhoneRecentWindowMin   int
+	PhoneRecentDistractMin int
+	PhoneRecentCooldownMin int
+	PhoneNowDistractMin    int
+	PhoneEffectCheckMin    int
+	PhoneEffectWorkedMin   int
+	PhoneRestStartMin      int
+	PhoneRestEndMin        int
+
+	ProactivePollSec        int
+	MeetingLeadMin          int
+	WorkNudgeCooldownMin    int
+	WorkNudgePomodoroGapMin int
+	WorkNudgePhoneMin       int
+	StallGapMin             int
+	StallCooldownMin        int
 }
 
 func Load() Config {
@@ -72,6 +93,24 @@ func Load() Config {
 	v.SetDefault("DEADLINE_POLL_SECONDS", 900)
 	v.SetDefault("SCHEDULER_SECONDS", 60)
 	v.SetDefault("OUTBOX_RELAY_SECONDS", 5)
+	v.SetDefault("DISTRACTION_MINUTES", 15)
+	v.SetDefault("DISTRACTION_COOLDOWN_MINUTES", 60)
+	v.SetDefault("PHONE_DAILY_DISTRACT_MINUTES", 90)
+	v.SetDefault("PHONE_RECENT_WINDOW_MINUTES", 60)
+	v.SetDefault("PHONE_RECENT_DISTRACT_MINUTES", 20)
+	v.SetDefault("PHONE_RECENT_COOLDOWN_MINUTES", 45)
+	v.SetDefault("PHONE_NOW_DISTRACT_MINUTES", 2)
+	v.SetDefault("PHONE_EFFECT_CHECK_MINUTES", 30)
+	v.SetDefault("PHONE_EFFECT_WORKED_MINUTES", 8)
+	v.SetDefault("PHONE_REST_START_MINUTES", 1200)
+	v.SetDefault("PHONE_REST_END_MINUTES", 300)
+	v.SetDefault("PROACTIVE_POLL_SECONDS", 300)
+	v.SetDefault("MEETING_LEAD_MINUTES", 15)
+	v.SetDefault("WORK_NUDGE_COOLDOWN_MINUTES", 90)
+	v.SetDefault("WORK_NUDGE_POMODORO_GAP_MINUTES", 90)
+	v.SetDefault("WORK_NUDGE_PHONE_MINUTES", 5)
+	v.SetDefault("STALL_GAP_MINUTES", 120)
+	v.SetDefault("STALL_COOLDOWN_MINUTES", 150)
 
 	return Config{
 		HTTPPort:          v.GetInt("HTTP_PORT"),
@@ -101,6 +140,27 @@ func Load() Config {
 		DeadlinePollSec:   v.GetInt("DEADLINE_POLL_SECONDS"),
 		SchedulerSec:      v.GetInt("SCHEDULER_SECONDS"),
 		OutboxRelaySec:    v.GetInt("OUTBOX_RELAY_SECONDS"),
+
+		PhoneIngestToken:       strings.TrimSpace(v.GetString("PHONE_INGEST_TOKEN")),
+		DistractionMinutes:     v.GetInt("DISTRACTION_MINUTES"),
+		DistractionCooldownMin: v.GetInt("DISTRACTION_COOLDOWN_MINUTES"),
+		PhoneDailyDistractMin:  v.GetInt("PHONE_DAILY_DISTRACT_MINUTES"),
+		PhoneRecentWindowMin:   v.GetInt("PHONE_RECENT_WINDOW_MINUTES"),
+		PhoneRecentDistractMin: v.GetInt("PHONE_RECENT_DISTRACT_MINUTES"),
+		PhoneRecentCooldownMin: v.GetInt("PHONE_RECENT_COOLDOWN_MINUTES"),
+		PhoneNowDistractMin:    v.GetInt("PHONE_NOW_DISTRACT_MINUTES"),
+		PhoneEffectCheckMin:    v.GetInt("PHONE_EFFECT_CHECK_MINUTES"),
+		PhoneEffectWorkedMin:   v.GetInt("PHONE_EFFECT_WORKED_MINUTES"),
+		PhoneRestStartMin:      v.GetInt("PHONE_REST_START_MINUTES"),
+		PhoneRestEndMin:        v.GetInt("PHONE_REST_END_MINUTES"),
+
+		ProactivePollSec:        v.GetInt("PROACTIVE_POLL_SECONDS"),
+		MeetingLeadMin:          v.GetInt("MEETING_LEAD_MINUTES"),
+		WorkNudgeCooldownMin:    v.GetInt("WORK_NUDGE_COOLDOWN_MINUTES"),
+		WorkNudgePomodoroGapMin: v.GetInt("WORK_NUDGE_POMODORO_GAP_MINUTES"),
+		WorkNudgePhoneMin:       v.GetInt("WORK_NUDGE_PHONE_MINUTES"),
+		StallGapMin:             v.GetInt("STALL_GAP_MINUTES"),
+		StallCooldownMin:        v.GetInt("STALL_COOLDOWN_MINUTES"),
 	}
 }
 

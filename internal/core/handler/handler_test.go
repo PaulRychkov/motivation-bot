@@ -18,6 +18,8 @@ import (
 	"github.com/PaulRychkov/motivation-bot/internal/core/models"
 )
 
+const testIngestToken = "phone-secret"
+
 type fakeService struct {
 	profiles  map[int64]models.ChatProfile
 	outcomes  map[uuid.UUID]string
@@ -26,6 +28,8 @@ type fakeService struct {
 	suppress  bool
 	created   []models.AgentInterventionRequest
 	pingLimit int
+	ingested  [][]byte
+	ingestErr error
 }
 
 func newFakeService() *fakeService {
@@ -120,10 +124,22 @@ func (f *fakeService) EffectivenessStats(context.Context, int64) ([]models.KindS
 	return []models.KindStat{{Kind: "free_ping", Outcome: "activated", Count: 2}}, nil
 }
 
+func (f *fakeService) IngestPhoneUsage(_ context.Context, raw []byte) error {
+	if f.ingestErr != nil {
+		return f.ingestErr
+	}
+	f.ingested = append(f.ingested, raw)
+	return nil
+}
+
+func (f *fakeService) PhoneActivity(context.Context, int64) (models.PhoneActivity, error) {
+	return models.PhoneActivity{TodayMinutes: 120, TodayDistractingMinutes: 45}, nil
+}
+
 func setup(t *testing.T) (*fakeService, *gin.Engine) {
 	t.Helper()
 	svc := newFakeService()
-	return svc, New(svc, zap.NewNop())
+	return svc, New(svc, zap.NewNop(), testIngestToken)
 }
 
 func doRequest(r *gin.Engine, method, path, body string) *httptest.ResponseRecorder {
@@ -336,5 +352,55 @@ func TestStats(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "free_ping") {
 		t.Errorf("нет статистики в ответе: %s", w.Body.String())
+	}
+}
+
+func ingestRequest(r *gin.Engine, token, body string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/ingest/v1/phone-usage", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestIngestPhoneUsage(t *testing.T) {
+	const event = `{"specversion":"1.0","id":"e1","source":"phone","type":"phone.usage.snapshot","data":{}}`
+
+	tests := []struct {
+		name       string
+		token      string
+		body       string
+		serviceErr error
+		status     int
+		stored     int
+	}{
+		{name: "без токена", token: "", body: event, status: http.StatusUnauthorized},
+		{name: "неверный токен", token: "wrong", body: event, status: http.StatusUnauthorized},
+		{name: "валидное событие", token: testIngestToken, body: event, status: http.StatusAccepted, stored: 1},
+		{name: "пустое тело", token: testIngestToken, body: "", status: http.StatusBadRequest},
+		{
+			name:       "сервис отверг событие",
+			token:      testIngestToken,
+			body:       event,
+			serviceErr: errors.New("ожидался source=phone"),
+			status:     http.StatusBadRequest,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			svc, r := setup(t)
+			svc.ingestErr = tc.serviceErr
+			w := ingestRequest(r, tc.token, tc.body)
+			if w.Code != tc.status {
+				t.Fatalf("код %d, ожидался %d (%s)", w.Code, tc.status, w.Body.String())
+			}
+			if len(svc.ingested) != tc.stored {
+				t.Errorf("сохранено событий %d, ожидалось %d", len(svc.ingested), tc.stored)
+			}
+		})
 	}
 }

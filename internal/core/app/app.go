@@ -17,6 +17,7 @@ import (
 	"github.com/PaulRychkov/motivation-bot/internal/config"
 	"github.com/PaulRychkov/motivation-bot/internal/core/logic"
 	"github.com/PaulRychkov/motivation-bot/internal/core/models"
+	"github.com/PaulRychkov/motivation-bot/internal/core/pomoclient"
 	"github.com/PaulRychkov/motivation-bot/internal/core/tasksclient"
 	"github.com/PaulRychkov/motivation-bot/internal/kafkax"
 )
@@ -27,6 +28,7 @@ type App struct {
 	Cfg   config.Config
 	Log   *zap.Logger
 	Tasks *tasksclient.Client
+	Pomo  *pomoclient.Client
 
 	dispatchMu sync.Mutex
 	pushMu     sync.Mutex
@@ -40,6 +42,7 @@ func New(db *gorm.DB, prod *kafkax.Producer, cfg config.Config, log *zap.Logger)
 		Cfg:      cfg,
 		Log:      log,
 		Tasks:    tasksclient.New(cfg.TasksURL),
+		Pomo:     pomoclient.New(cfg.PomodoroURL),
 		lastPush: map[uuid.UUID]time.Time{},
 	}
 }

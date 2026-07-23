@@ -34,6 +34,9 @@ const (
 	SourceTasks    = "tasks"
 	SourcePomodoro = "pomodoro"
 	SourceBot      = "bot"
+	SourcePhone    = "phone"
+
+	TypePhoneUsageSnapshot = "phone.usage.snapshot"
 
 	DefaultMorningPlanMin      = 540
 	DefaultEveningReviewMin    = 1290
@@ -122,6 +125,23 @@ type OutboxEvent struct {
 	PublishedAt   *time.Time
 	Attempts      int `gorm:"not null;default:0"`
 	LastError     *string
+}
+
+type PhoneActivity struct {
+	UpdatedAt                  *time.Time        `json:"updated_at"`
+	TodayMinutes               int               `json:"today_minutes"`
+	TodayDistractingMinutes    int               `json:"today_distracting_minutes"`
+	LastHourDistractingMinutes int               `json:"last_hour_distracting_minutes"`
+	NowDistractingMinutes      int               `json:"now_distracting_minutes"`
+	ForegroundApp              string            `json:"foreground_app"`
+	ByCategory                 map[string]int    `json:"by_category"`
+	TopApps                    []PhoneAppMinutes `json:"top_apps"`
+}
+
+type PhoneAppMinutes struct {
+	Label    string `json:"label"`
+	Category string `json:"category"`
+	Minutes  int    `json:"minutes"`
 }
 
 func (ChatProfile) TableName() string   { return "chat_profiles" }

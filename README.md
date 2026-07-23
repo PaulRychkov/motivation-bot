@@ -2,7 +2,7 @@
 
 Telegram-бот мотивации: помогает доводить задачи до конца — утренний план, вечерний итог, напоминания о дедлайнах, похвала за сделанное и свободные пинги в рамках дневного бюджета. Часть экосистемы activization (tasks + pomodoro + bot), сервисы общаются через Kafka событиями CloudEvents 1.0.
 
-Концепция «Гибрид»: гарантированные точки касания (расписание, дедлайны) создаёт core-service, а содержание и тон каждого сообщения генерирует ReAct-агент (DeepSeek через OpenRouter).
+Концепция «Гибрид»: гарантированные точки касания (расписание, дедлайны) создаёт core-service, а содержание и тон каждого сообщения генерирует ReAct-агент (LLM через OpenRouter; модель настраивается `BOT_LLM_MODEL`, дефолт deepseek/deepseek-chat, в живом деплое — anthropic/claude-sonnet-5).
 
 ## Архитектура
 
@@ -109,10 +109,19 @@ go vet ./...
 | BOT_OUTBOX_RELAY_SECONDS | 5 | релей outbox → bot.events |
 | BOT_PROMPT_DIR | prompts | каталог промптов агента |
 | BOT_MIGRATIONS_DIR | migrations | каталог миграций |
+| BOT_PHONE_INGEST_TOKEN | — | токен для приёма данных с телефона; пустой — приём без проверки |
+| BOT_DISTRACTION_MINUTES | 15 | сколько минут в отвлекающем приложении до напоминания |
+| BOT_DISTRACTION_COOLDOWN_MINUTES | 60 | перерыв между напоминаниями об отвлечении |
 
 ## Топики Kafka
 
-`tasks.events`, `pomodoro.events` (вход, CloudEvents) · `bot.events` (выход: intervention.sent, activation.detected) · внутренние: `bot.tg-updates`, `bot.tg-outgoing`, `bot.tg-sent`, `bot.agent-requests`, `bot.agent-responses`. Consumer group core — `bot-core-group`.
+`tasks.events`, `pomodoro.events`, `phone.events` (вход, CloudEvents) · `bot.events` (выход: intervention.sent, activation.detected) · внутренние: `bot.tg-updates`, `bot.tg-outgoing`, `bot.tg-sent`, `bot.agent-requests`, `bot.agent-responses`. Consumer group core — `bot-core-group`.
+
+## Приём данных с телефона
+
+`POST /ingest/v1/phone-usage` — принимает CloudEvent `source=phone`, `type=phone.usage.snapshot` от приложения [phone-focus](https://github.com/PaulRychkov/phone-focus). Авторизация — заголовок `Authorization: Bearer <BOT_PHONE_INGEST_TOKEN>`. Событие публикуется в топик `phone.events`, оттуда попадает в инбокс тем же путём, что задачи и помидор.
+
+Дальше `internal/core/app/phone.go` смотрит снимок: если экран включён, текущее приложение из отвлекающей категории (social, video, games) и человек сидит в нём дольше `BOT_DISTRACTION_MINUTES` подряд (или суммарно за окно), создаётся интервенция `question` с триггером `schedule` и контекстом `reason=distraction`. Текст пишет агент по `prompts/intervention.md`. Действуют общие ограничения `createIntervention`: тихие часы, пауза профиля и перерыв между напоминаниями. Решение вынесено в чистую функцию `logic.EvaluateDistraction` и покрыто table-driven-тестами.
 
 ## Ключевые правила (docs/data-model.md §4)
 

@@ -104,6 +104,12 @@ func (c *Client) Stats(ctx context.Context, chatID int64) ([]models.KindStat, er
 	return res.Stats, err
 }
 
+func (c *Client) PhoneActivity(ctx context.Context, chatID int64) (models.PhoneActivity, error) {
+	var res models.PhoneActivity
+	err := c.do(ctx, http.MethodGet, "/internal/v1/phone/activity/"+strconv.FormatInt(chatID, 10), nil, &res)
+	return res, err
+}
+
 func (c *Client) do(ctx context.Context, method, path string, body, out any) error {
 	var reader io.Reader
 	if body != nil {

@@ -199,6 +199,15 @@ func (a *App) sendIntervention(ctx context.Context, iv models.Intervention) erro
 	if err := a.Prod.Send(kafkax.TopicTgOutgoing, fmt.Sprint(p.ChatID), b); err != nil {
 		return fmt.Errorf("send tg outgoing: %w", err)
 	}
+	body := iv.Body
+	ivID := iv.ID
+	if _, err := a.AppendDialogMessage(ctx, p.ChatID, models.DialogAppend{
+		Role:           models.RoleAssistant,
+		Content:        &body,
+		InterventionID: &ivID,
+	}); err != nil {
+		a.Log.Warn("intervention dialog append", zap.Error(err))
+	}
 	return nil
 }
 

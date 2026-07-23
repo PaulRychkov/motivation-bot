@@ -29,6 +29,8 @@ func (a *App) HandleKafka(ctx context.Context, topic string, key, value []byte) 
 		}
 		a.ProcessInbox(ctx)
 		return nil
+	case kafkax.TopicPhoneEvents:
+		return a.HandlePhoneEvent(ctx, value)
 	case kafkax.TopicAgentResponses:
 		return a.HandleAgentResponse(ctx, value)
 	case kafkax.TopicTgSent:

@@ -37,6 +37,32 @@ func TestInQuietHours(t *testing.T) {
 	}
 }
 
+func TestInDailyWindow(t *testing.T) {
+	const start, end = 1200, 300 // отдых 20:00–05:00 через полночь
+	cases := []struct {
+		name string
+		min  int
+		want bool
+	}{
+		{"20:00 начало", 20 * 60, true},
+		{"21:00 внутри", 21 * 60, true},
+		{"23:59 внутри", 23*60 + 59, true},
+		{"03:00 после полуночи внутри", 3 * 60, true},
+		{"04:59 внутри", 4*60 + 59, true},
+		{"05:00 уже вне", 5 * 60, false},
+		{"12:00 день вне", 12 * 60, false},
+		{"19:59 ещё вне", 19*60 + 59, false},
+	}
+	for _, c := range cases {
+		if got := InDailyWindow(c.min, start, end); got != c.want {
+			t.Errorf("%s: InDailyWindow(%d)=%v, ожидалось %v", c.name, c.min, got, c.want)
+		}
+	}
+	if InDailyWindow(600, 480, 480) {
+		t.Error("start==end — окно выключено")
+	}
+}
+
 func TestLocalDateBoundaries(t *testing.T) {
 	yekat, err := time.LoadLocation("Asia/Yekaterinburg")
 	if err != nil {

@@ -64,6 +64,7 @@ func main() {
 	topics := []string{
 		kafkax.TopicTasksEvents,
 		kafkax.TopicPomodoroEvents,
+		kafkax.TopicPhoneEvents,
 		kafkax.TopicAgentResponses,
 		kafkax.TopicTgSent,
 	}
@@ -72,11 +73,12 @@ func main() {
 		log.Fatal("kafka consumer", zap.Error(err))
 	}
 	defer consumer.Close()
-	consumer.RequireSuccess(kafkax.TopicTasksEvents, kafkax.TopicPomodoroEvents)
+	consumer.RequireSuccess(kafkax.TopicTasksEvents, kafkax.TopicPomodoroEvents, kafkax.TopicPhoneEvents, kafkax.TopicAgentResponses, kafkax.TopicTgSent)
 
 	go consumer.Run(ctx)
 	go a.RunScheduler(ctx)
 	go a.RunDeadlinePoller(ctx)
+	go a.RunProactivePoller(ctx)
 	go a.RunDispatcher(ctx)
 	go a.RunWindowWorker(ctx)
 	go a.RunOutboxRelay(ctx)
@@ -84,7 +86,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.HTTPPort),
-		Handler: handler.New(a, log),
+		Handler: handler.New(a, log, cfg.PhoneIngestToken),
 	}
 	go func() {
 		log.Info("core-service запущен", zap.Int("port", cfg.HTTPPort))

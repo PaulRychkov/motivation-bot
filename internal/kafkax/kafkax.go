@@ -12,6 +12,7 @@ import (
 const (
 	TopicTasksEvents    = "tasks.events"
 	TopicPomodoroEvents = "pomodoro.events"
+	TopicPhoneEvents    = "phone.events"
 	TopicBotEvents      = "bot.events"
 	TopicTgUpdates      = "bot.tg-updates"
 	TopicTgOutgoing     = "bot.tg-outgoing"

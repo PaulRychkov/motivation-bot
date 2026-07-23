@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"go.uber.org/zap"
@@ -77,6 +76,12 @@ func (a *App) scheduledContext(ctx context.Context, p models.ChatProfile, kind, 
 		} else {
 			reqCtx["today_occurrences"] = occs
 		}
+		slots, err := a.Pomo.DayPlan(ctx)
+		if err != nil {
+			a.Log.Warn("pomodoro недоступен для утреннего контекста", zap.Error(err))
+		} else {
+			reqCtx["pomodoro_slots"] = slots
+		}
 		return reqCtx
 	case models.KindEveningReview:
 		summary := a.eveningSummary(ctx, localDate)
@@ -89,47 +94,32 @@ func (a *App) scheduledContext(ctx context.Context, p models.ChatProfile, kind, 
 }
 
 func (a *App) eveningSummary(ctx context.Context, localDate string) logic.EveningSummary {
-	items := a.planItemsForDate(ctx, localDate)
+	occs, err := a.Tasks.Occurrences(ctx, localDate, localDate, "")
+	if err != nil {
+		a.Log.Warn("tasks недоступен для вечернего итога", zap.Error(err))
+		return logic.EveningSummary{}
+	}
+	items := make([]logic.PlanItem, 0, len(occs))
 	completed := map[string]bool{}
 	skipped := map[string]bool{}
-	var events []models.InboxEvent
-	err := a.DB.WithContext(ctx).
-		Where("source = ? AND type IN ? AND payload->>'date' = ?",
-			models.SourceTasks, []string{"occurrence.completed", "occurrence.skipped"}, localDate).
-		Find(&events).Error
-	if err != nil {
-		a.Log.Warn("выборка дневных событий для итога", zap.Error(err))
-	}
-	for _, ev := range events {
-		var payload map[string]any
-		if err := json.Unmarshal(ev.Payload, &payload); err != nil {
-			continue
-		}
-		taskID, _ := payload["task_id"].(string)
+	for _, o := range occs {
+		taskID, _ := o["task_id"].(string)
 		if taskID == "" {
 			continue
 		}
-		switch ev.Type {
-		case "occurrence.completed":
+		title := ""
+		if task, ok := o["task"].(map[string]any); ok {
+			title, _ = task["title"].(string)
+		}
+		occID, _ := o["id"].(string)
+		items = append(items, logic.PlanItem{TaskID: taskID, OccurrenceID: occID, Title: title})
+		switch o["status"] {
+		case "completed":
 			completed[taskID] = true
-		case "occurrence.skipped":
+		case "skipped":
 			skipped[taskID] = true
 		}
 	}
 	return logic.BuildEveningSummary(items, completed, skipped)
 }
 
-func (a *App) planItemsForDate(ctx context.Context, localDate string) []logic.PlanItem {
-	var plan models.InboxEvent
-	err := a.DB.WithContext(ctx).
-		Where("source = ? AND type = ? AND payload->>'date' = ?", models.SourceTasks, "plan.committed", localDate).
-		Order("occurred_at DESC").First(&plan).Error
-	if err != nil {
-		return nil
-	}
-	var payload map[string]any
-	if err := json.Unmarshal(plan.Payload, &payload); err != nil {
-		return nil
-	}
-	return logic.ParsePlanItems(payload)
-}

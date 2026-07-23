@@ -1,6 +1,6 @@
 # agent-service
 
-ReAct-агент на DeepSeek (через OpenRouter, OpenAI-совместимый Chat Completions с tools/tool_calls). БД не имеет — всё состояние через core REST.
+ReAct-агент на LLM через OpenRouter (OpenAI-совместимый Chat Completions с tools/tool_calls; модель задаётся `BOT_LLM_MODEL`). БД не имеет — всё состояние через core REST.
 
 ## Потоки
 

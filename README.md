@@ -128,6 +128,14 @@ deploy\build-chat.ps1   # фронт → webdist chat-service → linux-бина
 
 На VM chat-service поднимается в `docker-compose` (порт 8084) из готового бинаря (`Dockerfile.prebuilt`) — VM не качает Go-модули (в РФ прокси Go режется). Windows-клиент `chat-desktop/build/bin/motivator-chat.exe` ходит на chat-service через SSH-туннель `localhost:18084`.
 
+## Бот на телефоне (весь бэкенд одним процессом)
+
+`mobile/` — gomobile-пакет: **весь бот в одном процессе на телефоне**, без Kafka и Postgres. Три сервиса (core + agent + доставка/чат) склеены не Kafka, а внутрипроцессной шиной `internal/inproc` (реализует `kafkax.Sender`: `Send` публикует сообщение подписчикам топика в отдельных горутинах). БД — SQLite (`ncruces/go-sqlite3`, миграции `migrations_sqlite`; UUID генерятся в `BeforeCreate`-хуках — в SQLite нет `gen_random_uuid()`). core-HTTP слушает `127.0.0.1:18085` (для `coreclient` агента), чат UI + WebSocket — `127.0.0.1:18086`. LLM — напрямую в OpenRouter (нужен VPN на телефоне, иначе РФ режет). MCP-инструменты агента (`tasks_*`/`pomodoro_*`) указывают на локальные приложения tasks/pomodoro на телефоне, если они запущены; если нет — агент работает без них.
+
+`android/` — Kotlin-обёртка (WebView + меню настроек: ключ OpenRouter, модель, MCP-адреса). Сборка: `deploy\build-bot-android.ps1`.
+
+Так на телефоне доступны и проактивные напоминания (планировщик/поллеры core), и чат с агентом, который видит локальные задачи и помидоры. Данные телефонного бота отдельны от VM-бота (синхронизацию можно добавить тем же приёмом, что в tasks/pomodoro).
+
 ## Топики Kafka
 
 `tasks.events`, `pomodoro.events`, `phone.events` (вход, CloudEvents) · `bot.events` (выход: intervention.sent, activation.detected) · внутренние: `bot.tg-updates`, `bot.tg-outgoing`, `bot.tg-sent`, `bot.agent-requests`, `bot.agent-responses`. Consumer group core — `bot-core-group`.

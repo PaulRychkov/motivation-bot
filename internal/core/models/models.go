@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 const (
@@ -150,3 +151,16 @@ func (InboxEvent) TableName() string    { return "inbox_events" }
 func (DialogMessage) TableName() string { return "dialog_messages" }
 func (AgentNote) TableName() string     { return "agent_notes" }
 func (OutboxEvent) TableName() string   { return "events_outbox" }
+
+func ensureUUID(id *uuid.UUID) {
+	if *id == uuid.Nil {
+		*id = uuid.New()
+	}
+}
+
+func (m *ChatProfile) BeforeCreate(*gorm.DB) error   { ensureUUID(&m.ID); return nil }
+func (m *Intervention) BeforeCreate(*gorm.DB) error  { ensureUUID(&m.ID); return nil }
+func (m *InboxEvent) BeforeCreate(*gorm.DB) error    { ensureUUID(&m.ID); return nil }
+func (m *DialogMessage) BeforeCreate(*gorm.DB) error { ensureUUID(&m.ID); return nil }
+func (m *AgentNote) BeforeCreate(*gorm.DB) error     { ensureUUID(&m.ID); return nil }
+func (m *OutboxEvent) BeforeCreate(*gorm.DB) error   { ensureUUID(&m.ID); return nil }

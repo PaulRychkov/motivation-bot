@@ -27,7 +27,7 @@ type Service struct {
 	Cfg     config.Config
 	Log     *zap.Logger
 	Core    *coreclient.Client
-	Prod    *kafkax.Producer
+	Prod    kafkax.Sender
 	Engine  *react.Engine
 	LLM     react.LLM
 	Prompts *prompts.Store

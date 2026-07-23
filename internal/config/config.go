@@ -39,6 +39,8 @@ type Config struct {
 	SchedulerSec      int
 	OutboxRelaySec    int
 
+	DBDriver               string
+	DBPath                 string
 	PhoneIngestToken       string
 	DistractionMinutes     int
 	DistractionCooldownMin int
@@ -74,6 +76,8 @@ func Load() Config {
 	v.AutomaticEnv()
 
 	v.SetDefault("HTTP_PORT", 8083)
+	v.SetDefault("DB_DRIVER", "postgres")
+	v.SetDefault("DB_PATH", "bot.db")
 	v.SetDefault("DB_HOST", "localhost")
 	v.SetDefault("DB_PORT", 5435)
 	v.SetDefault("DB_USER", "bot")
@@ -150,6 +154,8 @@ func Load() Config {
 		SchedulerSec:      v.GetInt("SCHEDULER_SECONDS"),
 		OutboxRelaySec:    v.GetInt("OUTBOX_RELAY_SECONDS"),
 
+		DBDriver:               v.GetString("DB_DRIVER"),
+		DBPath:                 v.GetString("DB_PATH"),
 		PhoneIngestToken:       strings.TrimSpace(v.GetString("PHONE_INGEST_TOKEN")),
 		DistractionMinutes:     v.GetInt("DISTRACTION_MINUTES"),
 		DistractionCooldownMin: v.GetInt("DISTRACTION_COOLDOWN_MINUTES"),

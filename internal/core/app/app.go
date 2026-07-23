@@ -24,7 +24,7 @@ import (
 
 type App struct {
 	DB    *gorm.DB
-	Prod  *kafkax.Producer
+	Prod  kafkax.Sender
 	Cfg   config.Config
 	Log   *zap.Logger
 	Tasks *tasksclient.Client
@@ -35,7 +35,7 @@ type App struct {
 	lastPush   map[uuid.UUID]time.Time
 }
 
-func New(db *gorm.DB, prod *kafkax.Producer, cfg config.Config, log *zap.Logger) *App {
+func New(db *gorm.DB, prod kafkax.Sender, cfg config.Config, log *zap.Logger) *App {
 	return &App{
 		DB:       db,
 		Prod:     prod,

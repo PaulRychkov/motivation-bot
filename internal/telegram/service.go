@@ -16,11 +16,11 @@ import (
 
 type Service struct {
 	Bot  *tgbot.Bot
-	Prod *kafkax.Producer
+	Prod kafkax.Sender
 	Log  *zap.Logger
 }
 
-func New(token string, prod *kafkax.Producer, log *zap.Logger) (*Service, error) {
+func New(token string, prod kafkax.Sender, log *zap.Logger) (*Service, error) {
 	s := &Service{Prod: prod, Log: log}
 	b, err := tgbot.New(token, tgbot.WithDefaultHandler(s.onUpdate))
 	if err != nil {

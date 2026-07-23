@@ -83,6 +83,13 @@ func (a *App) remindMeetingsSoon(ctx context.Context, p models.ChatProfile, loc 
 		if !ok {
 			continue
 		}
+		maxDur := a.Cfg.MeetingMaxDurMin
+		if maxDur <= 0 {
+			maxDur = 240
+		}
+		if durRaw, ok := task["estimated_duration_minutes"].(float64); ok && int(durRaw) > maxDur {
+			continue
+		}
 		start := int(startRaw)
 		if localMin < start-lead || localMin > start {
 			continue

@@ -59,6 +59,7 @@ type Config struct {
 	WorkNudgePhoneMin       int
 	StallGapMin             int
 	StallCooldownMin        int
+	MeetingMaxDurMin        int
 }
 
 func Load() Config {
@@ -109,8 +110,9 @@ func Load() Config {
 	v.SetDefault("WORK_NUDGE_COOLDOWN_MINUTES", 90)
 	v.SetDefault("WORK_NUDGE_POMODORO_GAP_MINUTES", 90)
 	v.SetDefault("WORK_NUDGE_PHONE_MINUTES", 5)
-	v.SetDefault("STALL_GAP_MINUTES", 120)
+	v.SetDefault("STALL_GAP_MINUTES", 60)
 	v.SetDefault("STALL_COOLDOWN_MINUTES", 150)
+	v.SetDefault("MEETING_MAX_DURATION_MINUTES", 240)
 
 	return Config{
 		HTTPPort:          v.GetInt("HTTP_PORT"),
@@ -161,6 +163,7 @@ func Load() Config {
 		WorkNudgePhoneMin:       v.GetInt("WORK_NUDGE_PHONE_MINUTES"),
 		StallGapMin:             v.GetInt("STALL_GAP_MINUTES"),
 		StallCooldownMin:        v.GetInt("STALL_COOLDOWN_MINUTES"),
+		MeetingMaxDurMin:        v.GetInt("MEETING_MAX_DURATION_MINUTES"),
 	}
 }
 

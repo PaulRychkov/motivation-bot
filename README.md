@@ -20,8 +20,10 @@ core-service (8083, PG 5435) <—> agent-service (ReAct, OpenRouter, MCP)
 - **cmd/telegram-service** — мост Telegram ⇄ Kafka (long polling через github.com/go-telegram/bot).
 - **cmd/core-service** — единственный владелец БД bot (PostgreSQL 5435): профили, интервенции, инбокс событий, диалог, память агента, outbox; планировщик, матчер активаций, воркеры.
 - **cmd/agent-service** — ReAct-агент: диалог с пользователем и генерация текстов интервенций; тулы — внутренние (core REST) и MCP-клиенты tasks/pomodoro.
+- **cmd/chat-service** (8084) — свой чат-канал бота **параллельно Telegram**: WebSocket-сервер принимает сообщения пользователя и публикует в `bot.tg-updates` (тот же вход, что и Telegram), а ответы из `bot.tg-outgoing` (группа `bot-chat-group`) рассылает клиентам. История — из core `/internal/v1/dialog`. Раздаёт свой SPA (`chat-desktop/frontend`). Ответ приходит и в чат, и в Telegram — каналы равноправны.
+- **chat-desktop/** — Windows-приложение чата (Wails, отдельный go.mod): встраивает тот же чат-SPA, `GetBackendURL` → chat-service (по умолчанию `localhost:18084` через SSH-туннель к VM). Аналог Telegram-клиента под винду.
 
-Один go.mod, общие пакеты в `internal/` (config, logger, kafkax, cloudevents, contracts, bootstrap).
+Один go.mod (кроме chat-desktop), общие пакеты в `internal/` (config, logger, kafkax, cloudevents, contracts, bootstrap).
 
 ## Структура
 
@@ -112,6 +114,19 @@ go vet ./...
 | BOT_PHONE_INGEST_TOKEN | — | токен для приёма данных с телефона; пустой — приём без проверки |
 | BOT_DISTRACTION_MINUTES | 15 | сколько минут в отвлекающем приложении до напоминания |
 | BOT_DISTRACTION_COOLDOWN_MINUTES | 60 | перерыв между напоминаниями об отвлечении |
+| BOT_CHAT_PORT | 8084 | порт chat-service (WebSocket + SPA) |
+| BOT_CHAT_CHAT_ID | 0 | chat_id профиля, с которым работает свой чат-канал |
+| BOT_CHAT_TOKEN | — | bearer-токен chat-service (пусто — без проверки) |
+
+## Свой чат-канал (аналог Telegram)
+
+`cmd/chat-service` даёт боту второй канал общения рядом с Telegram — на случай, когда Telegram недоступен или не нужен. Сборка и деплой:
+
+```powershell
+deploy\build-chat.ps1   # фронт → webdist chat-service → linux-бинарь для VM → Windows-exe
+```
+
+На VM chat-service поднимается в `docker-compose` (порт 8084) из готового бинаря (`Dockerfile.prebuilt`) — VM не качает Go-модули (в РФ прокси Go режется). Windows-клиент `chat-desktop/build/bin/motivator-chat.exe` ходит на chat-service через SSH-туннель `localhost:18084`.
 
 ## Топики Kafka
 

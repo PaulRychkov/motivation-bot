@@ -24,6 +24,7 @@ type Config struct {
 	OpenRouterBaseURL string
 	LLMModel          string
 	LLMTimeoutSec     int
+	LLMMaxTokens      int
 	ReactMaxIter      int
 	CoreURL           string
 	TasksURL          string
@@ -56,6 +57,7 @@ type Config struct {
 
 	ProactivePollSec        int
 	MeetingLeadMin          int
+	MeetingSilenceMin       int
 	WorkNudgeCooldownMin    int
 	WorkNudgePomodoroGapMin int
 	WorkNudgePhoneMin       int
@@ -86,8 +88,9 @@ func Load() Config {
 	v.SetDefault("DB_SSLMODE", "disable")
 	v.SetDefault("KAFKA_BROKERS", "localhost:9094")
 	v.SetDefault("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-	v.SetDefault("LLM_MODEL", "deepseek/deepseek-chat")
+	v.SetDefault("LLM_MODEL", "z-ai/glm-5.3-flash")
 	v.SetDefault("LLM_TIMEOUT_SECONDS", 90)
+	v.SetDefault("LLM_MAX_TOKENS", 4096)
 	v.SetDefault("REACT_MAX_ITERATIONS", 8)
 	v.SetDefault("CORE_URL", "http://localhost:8083")
 	v.SetDefault("TASKS_URL", "http://localhost:8081")
@@ -113,7 +116,8 @@ func Load() Config {
 	v.SetDefault("PHONE_EFFECT_WORKED_MINUTES", 8)
 	v.SetDefault("PHONE_REST_START_MINUTES", 1200)
 	v.SetDefault("PHONE_REST_END_MINUTES", 300)
-	v.SetDefault("PROACTIVE_POLL_SECONDS", 300)
+	v.SetDefault("PROACTIVE_POLL_SECONDS", 120)
+	v.SetDefault("MEETING_SILENCE_MINUTES", 7)
 	v.SetDefault("MEETING_LEAD_MINUTES", 15)
 	v.SetDefault("WORK_NUDGE_COOLDOWN_MINUTES", 90)
 	v.SetDefault("WORK_NUDGE_POMODORO_GAP_MINUTES", 90)
@@ -139,6 +143,7 @@ func Load() Config {
 		OpenRouterBaseURL: strings.TrimRight(v.GetString("OPENROUTER_BASE_URL"), "/"),
 		LLMModel:          v.GetString("LLM_MODEL"),
 		LLMTimeoutSec:     v.GetInt("LLM_TIMEOUT_SECONDS"),
+		LLMMaxTokens:      v.GetInt("LLM_MAX_TOKENS"),
 		ReactMaxIter:      v.GetInt("REACT_MAX_ITERATIONS"),
 		CoreURL:           strings.TrimRight(v.GetString("CORE_URL"), "/"),
 		TasksURL:          strings.TrimRight(v.GetString("TASKS_URL"), "/"),
@@ -171,6 +176,7 @@ func Load() Config {
 
 		ProactivePollSec:        v.GetInt("PROACTIVE_POLL_SECONDS"),
 		MeetingLeadMin:          v.GetInt("MEETING_LEAD_MINUTES"),
+		MeetingSilenceMin:       v.GetInt("MEETING_SILENCE_MINUTES"),
 		WorkNudgeCooldownMin:    v.GetInt("WORK_NUDGE_COOLDOWN_MINUTES"),
 		WorkNudgePomodoroGapMin: v.GetInt("WORK_NUDGE_POMODORO_GAP_MINUTES"),
 		WorkNudgePhoneMin:       v.GetInt("WORK_NUDGE_PHONE_MINUTES"),

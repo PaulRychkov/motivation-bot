@@ -67,59 +67,21 @@ func (a *App) schedulerTick(ctx context.Context) {
 }
 
 func (a *App) scheduledContext(ctx context.Context, p models.ChatProfile, kind, localDate string, loc *time.Location) map[string]any {
-	switch kind {
-	case models.KindMorningPlan:
-		reqCtx := map[string]any{"kind_hint": "утренний план дня"}
-		occs, err := a.Tasks.Occurrences(ctx, localDate, localDate, "pending")
-		if err != nil {
-			a.Log.Warn("tasks недоступен для утреннего контекста", zap.Error(err))
-		} else {
-			reqCtx["today_occurrences"] = occs
-		}
-		slots, err := a.Pomo.DayPlan(ctx)
-		if err != nil {
-			a.Log.Warn("pomodoro недоступен для утреннего контекста", zap.Error(err))
-		} else {
-			reqCtx["pomodoro_slots"] = slots
-		}
-		return reqCtx
-	case models.KindEveningReview:
-		summary := a.eveningSummary(ctx, localDate)
-		return map[string]any{
-			"kind_hint": "вечерний итог дня",
-			"summary":   summary,
-		}
+	hint := map[string]string{
+		models.KindMorningPlan:   "утренний план дня",
+		models.KindEveningReview: "вечерний итог дня",
+	}[kind]
+	if hint == "" {
+		return map[string]any{}
 	}
-	return map[string]any{}
-}
-
-func (a *App) eveningSummary(ctx context.Context, localDate string) logic.EveningSummary {
-	occs, err := a.Tasks.Occurrences(ctx, localDate, localDate, "")
+	reqCtx := map[string]any{"kind_hint": hint}
+	snap, err := a.daySnapshot(ctx, loc)
 	if err != nil {
-		a.Log.Warn("tasks недоступен для вечернего итога", zap.Error(err))
-		return logic.EveningSummary{}
+		a.Log.Warn("снимок дня для плановой интервенции", zap.String("kind", kind), zap.Error(err))
 	}
-	items := make([]logic.PlanItem, 0, len(occs))
-	completed := map[string]bool{}
-	skipped := map[string]bool{}
-	for _, o := range occs {
-		taskID, _ := o["task_id"].(string)
-		if taskID == "" {
-			continue
-		}
-		title := ""
-		if task, ok := o["task"].(map[string]any); ok {
-			title, _ = task["title"].(string)
-		}
-		occID, _ := o["id"].(string)
-		items = append(items, logic.PlanItem{TaskID: taskID, OccurrenceID: occID, Title: title})
-		switch o["status"] {
-		case "completed":
-			completed[taskID] = true
-		case "skipped":
-			skipped[taskID] = true
-		}
+	if kind == models.KindEveningReview {
+		snap.Tasks = logic.WithoutEvents(snap.Tasks)
 	}
-	return logic.BuildEveningSummary(items, completed, skipped)
+	reqCtx["day"] = snap
+	return reqCtx
 }
-

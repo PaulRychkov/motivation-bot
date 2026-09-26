@@ -110,6 +110,12 @@ func (c *Client) PhoneActivity(ctx context.Context, chatID int64) (models.PhoneA
 	return res, err
 }
 
+func (c *Client) DaySnapshot(ctx context.Context, chatID int64) (models.DaySnapshot, error) {
+	var res models.DaySnapshot
+	err := c.do(ctx, http.MethodGet, "/internal/v1/day/"+strconv.FormatInt(chatID, 10), nil, &res)
+	return res, err
+}
+
 func (c *Client) do(ctx context.Context, method, path string, body, out any) error {
 	var reader io.Reader
 	if body != nil {

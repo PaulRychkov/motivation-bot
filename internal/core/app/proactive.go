@@ -68,10 +68,34 @@ func (a *App) proactiveTick(ctx context.Context) {
 	}
 }
 
+const (
+	stageSoon       = "soon"
+	stageStart      = "start"
+	stageNoPomodoro = "no_pomodoro"
+	stageResume     = "resume"
+)
+
+func reasonForStage(stage string) string {
+	switch stage {
+	case stageStart:
+		return "meeting_start"
+	case stageNoPomodoro:
+		return "meeting_no_pomodoro"
+	case stageResume:
+		return "meeting_resume"
+	default:
+		return "meeting_soon"
+	}
+}
+
 func (a *App) remindMeetingsSoon(ctx context.Context, p models.ChatProfile, loc *time.Location, now time.Time, byID map[string]map[string]any, occs []map[string]any, localMin int, localDate string) {
 	lead := a.Cfg.MeetingLeadMin
 	if lead <= 0 {
 		lead = 15
+	}
+	silence := a.Cfg.MeetingSilenceMin
+	if silence <= 0 {
+		silence = 7
 	}
 	for _, occ := range occs {
 		taskID, _ := occ["task_id"].(string)
@@ -91,19 +115,93 @@ func (a *App) remindMeetingsSoon(ctx context.Context, p models.ChatProfile, loc 
 			continue
 		}
 		start := int(startRaw)
-		if localMin < start-lead || localMin > start {
+		title, _ := task["title"].(string)
+		requires := requiresPomodoro(task)
+		if !requires {
+			if localMin < start-lead || localMin >= start {
+				continue
+			}
+			if _, busy := nonPomodoroEventAt(byID, occs, localMin, taskID); busy {
+				continue
+			}
+			a.createMeetingReminder(ctx, p, loc, now, taskID, title, localDate, start, start-localMin, stageSoon, false)
 			continue
 		}
-		title, _ := task["title"].(string)
-		a.createMeetingReminder(ctx, p, loc, now, taskID, title, localDate, start, start-localMin)
+		snoozed, released := a.taskSnoozed(ctx, p, taskID, localDate, now)
+		if snoozed {
+			continue
+		}
+		if released {
+			a.createMeetingReminder(ctx, p, loc, now, taskID, title, localDate, start, localMin-start, stageResume, true)
+			continue
+		}
+		switch {
+		case localMin >= start-lead && localMin < start:
+			a.createMeetingReminder(ctx, p, loc, now, taskID, title, localDate, start, start-localMin, stageSoon, true)
+		case localMin >= start && localMin <= start+1:
+			a.createMeetingReminder(ctx, p, loc, now, taskID, title, localDate, start, 0, stageStart, true)
+		case localMin >= start+silence && localMin <= start+silence*4:
+			if !a.focusRunningSince(ctx, loc, start-lead) {
+				a.createMeetingReminder(ctx, p, loc, now, taskID, title, localDate, start, localMin-start, stageNoPomodoro, true)
+			}
+		}
 	}
 }
 
-func (a *App) createMeetingReminder(ctx context.Context, p models.ChatProfile, loc *time.Location, now time.Time, taskID, title, localDate string, startMin, minutesUntil int) {
+func requiresPomodoro(task map[string]any) bool {
+	if v, ok := task["requires_pomodoro"].(bool); ok {
+		return v
+	}
+	return true
+}
+
+func nonPomodoroEventAt(byID map[string]map[string]any, occs []map[string]any, minute int, exceptTaskID string) (string, bool) {
+	for _, occ := range occs {
+		taskID, _ := occ["task_id"].(string)
+		if taskID == exceptTaskID {
+			continue
+		}
+		task, ok := byID[taskID]
+		if !ok || !taskOpen(task) || requiresPomodoro(task) {
+			continue
+		}
+		startRaw, ok := task["start_time_minutes"].(float64)
+		if !ok {
+			continue
+		}
+		durRaw, _ := task["estimated_duration_minutes"].(float64)
+		start := int(startRaw)
+		if minute >= start && minute < start+int(durRaw) {
+			title, _ := task["title"].(string)
+			return title, true
+		}
+	}
+	return "", false
+}
+
+func (a *App) focusRunningSince(ctx context.Context, loc *time.Location, sinceMin int) bool {
+	if a.Pomo == nil {
+		return false
+	}
+	st, err := a.Pomo.State(ctx)
+	if err != nil {
+		a.Log.Warn("состояние помидора недоступно", zap.Error(err))
+		return true
+	}
+	if st == nil || st.Phase != "focus" {
+		return false
+	}
+	if st.StartedAt == nil {
+		return true
+	}
+	return logic.LocalMinutes(*st.StartedAt, loc) >= sinceMin
+}
+
+func (a *App) createMeetingReminder(ctx context.Context, p models.ChatProfile, loc *time.Location, now time.Time, taskID, title, localDate string, startMin, minutesUntil int, stage string, requires bool) {
 	var cnt int64
 	a.DB.WithContext(ctx).Model(&models.Intervention{}).
-		Where("chat_profile_id = ? AND kind = ? AND task_source = ? AND task_external_id = ? AND target_date = ?",
-			p.ID, models.KindDeadlineReminder, models.SourceTasks, taskID, localDate).Count(&cnt)
+		Where("chat_profile_id = ? AND kind = ? AND task_source = ? AND task_external_id = ? AND target_date = ? AND stage IS NOT DISTINCT FROM ?",
+			p.ID, models.KindDeadlineReminder, models.SourceTasks, taskID, localDate, stage).Count(&cnt)
 	if cnt > 0 {
 		return
 	}
@@ -116,11 +214,14 @@ func (a *App) createMeetingReminder(ctx context.Context, p models.ChatProfile, l
 		TaskSource:     &src,
 		TaskExternalID: &tid,
 		TargetDate:     &td,
+		Stage:          &stage,
 		Context: map[string]any{
-			"reason":        "meeting_soon",
-			"task_title":    title,
-			"start_time":    fmt.Sprintf("%02d:%02d", startMin/60, startMin%60),
-			"minutes_until": minutesUntil,
+			"reason":            reasonForStage(stage),
+			"stage":             stage,
+			"task_title":        title,
+			"start_time":        fmt.Sprintf("%02d:%02d", startMin/60, startMin%60),
+			"minutes_until":     minutesUntil,
+			"requires_pomodoro": requires,
 		},
 	}); err != nil {
 		a.Log.Error("напоминание о митинге", zap.Error(err))
@@ -131,6 +232,9 @@ func (a *App) createMeetingReminder(ctx context.Context, p models.ChatProfile, l
 
 func (a *App) maybeWorkNudge(ctx context.Context, p models.ChatProfile, loc *time.Location, now time.Time, byID map[string]map[string]any, occs []map[string]any, localDate string, localMin int) {
 	if logic.InDailyWindow(localMin, a.Cfg.PhoneRestStartMin, a.Cfg.PhoneRestEndMin) {
+		return
+	}
+	if _, busy := nonPomodoroEventAt(byID, occs, localMin, ""); busy {
 		return
 	}
 
@@ -195,6 +299,9 @@ func (a *App) maybeStallNudge(ctx context.Context, p models.ChatProfile, loc *ti
 		gap = 120
 	}
 	if localMin < p.MorningPlanMin+gap {
+		return
+	}
+	if _, busy := nonPomodoroEventAt(byID, occs, localMin, ""); busy {
 		return
 	}
 	pending, titles := pendingWork(byID, occs)

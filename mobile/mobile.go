@@ -165,6 +165,7 @@ func Start(dataDir, openrouterKey, model, tasksMCP, pomodoroMCP string) string {
 		MaxIterations: cfg.ReactMaxIter,
 		StepTimeout:   time.Duration(cfg.LLMTimeoutSec) * time.Second,
 		Temperature:   openrouter.Float(0.7),
+		MaxTokens:     cfg.LLMMaxTokens,
 	}
 	svc := &run.Service{
 		Cfg:     cfg,

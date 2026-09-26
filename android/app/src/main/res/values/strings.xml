@@ -3,7 +3,7 @@
     <string name="app_name">Мотиватор</string>
     <string name="menu_settings">Настройки</string>
     <string name="key_hint">Ключ OpenRouter</string>
-    <string name="model_hint">Модель (напр. anthropic/claude-sonnet-5)</string>
+    <string name="model_hint">Модель (напр. z-ai/glm-5.3-flash)</string>
     <string name="tasks_mcp_hint">MCP tasks (напр. http://127.0.0.1:18081/mcp)</string>
     <string name="pomo_mcp_hint">MCP pomodoro (напр. http://127.0.0.1:18082/mcp)</string>
     <string name="save">Сохранить</string>

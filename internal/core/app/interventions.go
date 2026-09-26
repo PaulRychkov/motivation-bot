@@ -27,6 +27,7 @@ type createParams struct {
 	TaskSource     *string
 	TaskExternalID *string
 	TargetDate     *string
+	Stage          *string
 	Context        map[string]any
 }
 
@@ -71,6 +72,7 @@ func (a *App) createIntervention(ctx context.Context, p models.ChatProfile, loc 
 		Tone:           p.DefaultTone,
 		SentAt:         now,
 		WindowEndsAt:   logic.WindowEnd(params.Kind, now, loc, localDate, p.EveningReviewMin, params.TargetDate),
+		Stage:          params.Stage,
 		Outcome:        models.OutcomePending,
 		Evidence:       datatypes.JSON("[]"),
 		LocalDate:      ld,

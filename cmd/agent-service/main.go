@@ -61,6 +61,7 @@ func main() {
 		MaxIterations: cfg.ReactMaxIter,
 		StepTimeout:   time.Duration(cfg.LLMTimeoutSec) * time.Second,
 		Temperature:   openrouter.Float(0.7),
+		MaxTokens:     cfg.LLMMaxTokens,
 	}
 
 	svc := &run.Service{

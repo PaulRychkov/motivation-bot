@@ -33,7 +33,7 @@ func TestChatSendsToolsAndParsesToolCalls(t *testing.T) {
 
 	c := New("test-key", srv.URL)
 	msg, err := c.Chat(context.Background(), ChatRequest{
-		Model:    "deepseek/deepseek-chat",
+		Model:    "z-ai/glm-5.3-flash",
 		Messages: []Message{{Role: "user", Content: "привет"}},
 		Tools: []Tool{{
 			Type:     "function",

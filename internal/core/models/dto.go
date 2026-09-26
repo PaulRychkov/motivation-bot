@@ -48,3 +48,44 @@ type AgentInterventionResult struct {
 	Status       string        `json:"status"`
 	Intervention *Intervention `json:"intervention,omitempty"`
 }
+
+const (
+	DayTaskEvent  = "event"
+	DayTaskWindow = "window"
+	DayTaskEffort = "effort"
+)
+
+type DayTask struct {
+	Title            string `json:"title"`
+	Kind             string `json:"kind"`
+	Start            string `json:"start,omitempty"`
+	End              string `json:"end,omitempty"`
+	EffortMinutes    int    `json:"effort_minutes,omitempty"`
+	ProgressMinutes  int    `json:"progress_minutes"`
+	Status           string `json:"status"`
+	RequiresPomodoro bool   `json:"requires_pomodoro"`
+	Reschedulable    bool   `json:"reschedulable"`
+	Recurrence       string `json:"recurrence"`
+}
+
+type TaskSlots struct {
+	Title string `json:"title"`
+	Slots int    `json:"slots"`
+	Done  int    `json:"done"`
+}
+
+type PomodoroSummary struct {
+	Total    int         `json:"total"`
+	Done     int         `json:"done"`
+	Overflow int         `json:"overflow"`
+	Credit   float64     `json:"credit"`
+	Phase    string      `json:"phase,omitempty"`
+	ByTask   []TaskSlots `json:"by_task"`
+}
+
+type DaySnapshot struct {
+	Date     string           `json:"date"`
+	Now      string           `json:"now"`
+	Tasks    []DayTask        `json:"tasks"`
+	Pomodoro *PomodoroSummary `json:"pomodoro,omitempty"`
+}

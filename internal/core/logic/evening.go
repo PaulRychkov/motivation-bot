@@ -28,24 +28,3 @@ func ParsePlanItems(payload map[string]any) []PlanItem {
 	}
 	return items
 }
-
-type EveningSummary struct {
-	Done      []PlanItem `json:"done"`
-	Skipped   []PlanItem `json:"skipped"`
-	Remaining []PlanItem `json:"remaining"`
-}
-
-func BuildEveningSummary(items []PlanItem, completedTaskIDs, skippedTaskIDs map[string]bool) EveningSummary {
-	var s EveningSummary
-	for _, it := range items {
-		switch {
-		case completedTaskIDs[it.TaskID]:
-			s.Done = append(s.Done, it)
-		case skippedTaskIDs[it.TaskID]:
-			s.Skipped = append(s.Skipped, it)
-		default:
-			s.Remaining = append(s.Remaining, it)
-		}
-	}
-	return s
-}

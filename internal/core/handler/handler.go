@@ -34,6 +34,7 @@ type Service interface {
 	EffectivenessStats(ctx context.Context, chatID int64) ([]models.KindStat, error)
 	IngestPhoneUsage(ctx context.Context, raw []byte) error
 	PhoneActivity(ctx context.Context, chatID int64) (models.PhoneActivity, error)
+	DaySnapshot(ctx context.Context, chatID int64) (models.DaySnapshot, error)
 }
 
 var allowedOutcomes = map[string]bool{
@@ -82,6 +83,7 @@ func New(svc Service, log *zap.Logger, ingestToken string) *gin.Engine {
 	in.PUT("/notes/:key", h.putNote)
 	in.GET("/stats/effectiveness", h.stats)
 	in.GET("/phone/activity/:chat_id", h.phoneActivity)
+	in.GET("/day/:chat_id", h.daySnapshot)
 
 	ingest := r.Group("/ingest/v1")
 	ingest.POST("/phone-usage", h.ingestPhoneUsage)
@@ -368,6 +370,19 @@ func (h *Handler) phoneActivity(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, activity)
+}
+
+func (h *Handler) daySnapshot(c *gin.Context) {
+	chatID, ok := chatIDParam(c)
+	if !ok {
+		return
+	}
+	snap, err := h.svc.DaySnapshot(c.Request.Context(), chatID)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, snap)
 }
 
 func (h *Handler) stats(c *gin.Context) {

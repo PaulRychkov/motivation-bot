@@ -22,4 +22,4 @@ ReAct-агент на LLM через OpenRouter (OpenAI-совместимый C
 go run ./cmd/agent-service
 ```
 
-Нужны: Kafka, core-service, `OPENROUTER_API_KEY` в `.env`. Модель — `BOT_LLM_MODEL` (default `deepseek/deepseek-chat`). Тесты ReAct-цикла с mock-LLM — `go test ./internal/agent/...`.
+Нужны: Kafka, core-service, `OPENROUTER_API_KEY` в `.env`. Модель — `BOT_LLM_MODEL` (default `z-ai/glm-5.3-flash`). Тесты ReAct-цикла с mock-LLM — `go test ./internal/agent/...`.

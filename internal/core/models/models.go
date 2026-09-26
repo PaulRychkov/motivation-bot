@@ -68,6 +68,8 @@ type Intervention struct {
 	TaskSource        *string        `json:"task_source"`
 	TaskExternalID    *string        `json:"task_external_id"`
 	TargetDate        *Date          `gorm:"type:date" json:"target_date"`
+	Stage             *string        `json:"stage"`
+	SnoozeUntil       *time.Time     `json:"snooze_until"`
 	Body              string         `gorm:"not null" json:"body"`
 	Tone              string         `gorm:"type:tone;not null" json:"tone"`
 	TelegramMessageID *int64         `json:"telegram_message_id"`

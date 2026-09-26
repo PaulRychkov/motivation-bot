@@ -80,7 +80,12 @@ func (s *Service) handleUpdate(ctx context.Context, value []byte) error {
 		s.Log.Warn("заметки недоступны", zap.Error(err))
 	}
 
-	system := s.buildSystemPrompt(profile, notes, created)
+	day, dayErr := s.Core.DaySnapshot(ctx, upd.ChatID)
+	if dayErr != nil {
+		s.Log.Warn("снимок дня недоступен", zap.Error(dayErr))
+	}
+
+	system := s.buildSystemPrompt(profile, notes, created) + renderDay(day, dayErr == nil)
 	msgs := append([]openrouter.Message{{Role: "system", Content: system}}, historyToMessages(history)...)
 
 	src := tools.NewCombined(append([]tools.Source{tools.NewCoreTools(s.Core, upd.ChatID)}, s.Shared...)...)
@@ -221,6 +226,7 @@ func (s *Service) generateInterventionText(ctx context.Context, req contracts.Ag
 	msg, err := s.LLM.Chat(llmCtx, openrouter.ChatRequest{
 		Model:       s.Cfg.LLMModel,
 		Temperature: openrouter.Float(0.8),
+		MaxTokens:   s.Cfg.LLMMaxTokens,
 		Messages: []openrouter.Message{
 			{Role: "system", Content: s.Prompts.Get("intervention")},
 			{Role: "user", Content: string(payload)},

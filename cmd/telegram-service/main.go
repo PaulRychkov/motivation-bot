@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -48,10 +50,21 @@ func main() {
 	if err != nil {
 		log.Fatal("kafka consumer", zap.Error(err))
 	}
-	consumer.RequireSuccess(kafkax.TopicTgOutgoing)
 	defer consumer.Close()
 
 	go consumer.Run(ctx)
+
+	srv := &http.Server{Addr: ":8084", Handler: svc.HealthHandler()}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error("health-сервер", zap.Error(err))
+		}
+	}()
+	defer func() {
+		shutdownCtx, done := context.WithTimeout(context.Background(), 3*time.Second)
+		defer done()
+		srv.Shutdown(shutdownCtx)
+	}()
 
 	log.Info("telegram-service запущен, long polling начат")
 	svc.Bot.Start(ctx)

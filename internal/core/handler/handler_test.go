@@ -136,6 +136,27 @@ func (f *fakeService) PhoneActivity(context.Context, int64) (models.PhoneActivit
 	return models.PhoneActivity{TodayMinutes: 120, TodayDistractingMinutes: 45}, nil
 }
 
+func (f *fakeService) DaySnapshot(_ context.Context, chatID int64) (models.DaySnapshot, error) {
+	if chatID != 42 {
+		return models.DaySnapshot{}, models.ErrNotFound
+	}
+	return models.DaySnapshot{Date: "2026-09-23", Tasks: []models.DayTask{{Title: "Английский", Kind: models.DayTaskEffort}}}, nil
+}
+
+func TestDaySnapshotEndpoint(t *testing.T) {
+	_, r := setup(t)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/internal/v1/day/42", nil))
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "Английский") {
+		t.Fatalf("снимок дня: %d %s", w.Code, w.Body.String())
+	}
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/internal/v1/day/7", nil))
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("неизвестный chat_id должен давать 404, получено %d", w.Code)
+	}
+}
+
 func setup(t *testing.T) (*fakeService, *gin.Engine) {
 	t.Helper()
 	svc := newFakeService()

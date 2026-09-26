@@ -23,6 +23,7 @@ type Engine struct {
 	MaxIterations int
 	StepTimeout   time.Duration
 	Temperature   *float64
+	MaxTokens     int
 }
 
 func (e *Engine) Run(ctx context.Context, src tools.Source, messages []openrouter.Message, onMessage func(openrouter.Message)) (string, error) {
@@ -43,6 +44,7 @@ func (e *Engine) Run(ctx context.Context, src tools.Source, messages []openroute
 			Model:       e.Model,
 			Messages:    msgs,
 			Temperature: e.Temperature,
+			MaxTokens:   e.MaxTokens,
 		}
 		if defs := src.Definitions(ctx); len(defs) > 0 {
 			req.Tools = defs

@@ -214,6 +214,9 @@ func (a *App) AppendDialogMessage(ctx context.Context, chatID int64, in models.D
 			return fmt.Errorf("create dialog message: %w", err)
 		}
 		if in.Role == models.RoleUser {
+			if err := a.deferOnReply(tx, p, in.Content); err != nil {
+				return err
+			}
 			return a.activateOnReply(tx, p.ID, in.Content)
 		}
 		return nil

@@ -55,7 +55,7 @@ class MainActivity : Activity() {
         val err = Mobile.start(
             filesDir.absolutePath,
             prefs().getString("key", "") ?: "",
-            prefs().getString("model", "anthropic/claude-sonnet-5") ?: "",
+            prefs().getString("model", "z-ai/glm-5.3-flash") ?: "",
             prefs().getString("tasks_mcp", "") ?: "",
             prefs().getString("pomo_mcp", "") ?: "",
         )
@@ -72,7 +72,7 @@ class MainActivity : Activity() {
 
     private fun showSettingsDialog() {
         val keyInput = field(R.string.key_hint, "key", "")
-        val modelInput = field(R.string.model_hint, "model", "anthropic/claude-sonnet-5")
+        val modelInput = field(R.string.model_hint, "model", "z-ai/glm-5.3-flash")
         val tasksInput = field(R.string.tasks_mcp_hint, "tasks_mcp", "")
         val pomoInput = field(R.string.pomo_mcp_hint, "pomo_mcp", "")
         val box = LinearLayout(this).apply {
